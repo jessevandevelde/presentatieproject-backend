@@ -14,7 +14,7 @@ export function getStatement(database: DatabaseSync, index: number): StatementRe
   }
 
   const answers = database.prepare(`
-    SELECT parties.id AS partyId, parties.name AS partyName,
+    SELECT parties.id AS profileId, parties.name AS profileName,
            party_answers.answer
     FROM parties
     LEFT JOIN party_answers ON party_answers.id = (
@@ -31,6 +31,6 @@ export function getStatement(database: DatabaseSync, index: number): StatementRe
     index,
     id: statement['id'],
     text: statement['text'],
-    partyAnswers: answers,
+    profileAnswers: answers,
   };
 }

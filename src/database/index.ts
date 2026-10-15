@@ -4,7 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 const projectRoot = resolve(__dirname, '../..');
 
-export function openDatabase(path = process.env['DATABASE_PATH'] ?? resolve(projectRoot, 'data/stemwijzer.sqlite')): DatabaseSync {
+export function openDatabase(path = process.env['DATABASE_PATH'] ?? resolve(projectRoot, 'data/roc-kompas.sqlite')): DatabaseSync {
   if (path !== ':memory:') {
     mkdirSync(dirname(path), { recursive: true });
   }

@@ -60,12 +60,12 @@ void it('matches a complete submission without storing user answers', async (con
       deepStrictEqual(await response.json(), {
         totalAnswers: 3,
         matches: [
-          { partyId: 1, partyName: 'Alles gelijk', matchPercentage: 100, matchedAnswers: 3, comparedAnswers: 3, missingAnswers: 0 },
-          { partyId: 7, partyName: 'Gelijke score', matchPercentage: 100, matchedAnswers: 3, comparedAnswers: 3, missingAnswers: 0 },
-          { partyId: 3, partyName: 'Onvolledig', matchPercentage: 100, matchedAnswers: 1, comparedAnswers: 1, missingAnswers: 2 },
-          { partyId: 2, partyName: 'Twee gelijk', matchPercentage: 66.67, matchedAnswers: 2, comparedAnswers: 3, missingAnswers: 0 },
-          { partyId: 4, partyName: 'Niets gelijk', matchPercentage: 0, matchedAnswers: 0, comparedAnswers: 3, missingAnswers: 0 },
-          { partyId: 5, partyName: 'Geen antwoorden', matchPercentage: null, matchedAnswers: 0, comparedAnswers: 0, missingAnswers: 3 },
+          { profileId: 1, profileName: 'Alles gelijk', matchPercentage: 100, matchedAnswers: 3, comparedAnswers: 3, missingAnswers: 0 },
+          { profileId: 7, profileName: 'Gelijke score', matchPercentage: 100, matchedAnswers: 3, comparedAnswers: 3, missingAnswers: 0 },
+          { profileId: 3, profileName: 'Onvolledig', matchPercentage: 100, matchedAnswers: 1, comparedAnswers: 1, missingAnswers: 2 },
+          { profileId: 2, profileName: 'Twee gelijk', matchPercentage: 66.67, matchedAnswers: 2, comparedAnswers: 3, missingAnswers: 0 },
+          { profileId: 4, profileName: 'Niets gelijk', matchPercentage: 0, matchedAnswers: 0, comparedAnswers: 3, missingAnswers: 0 },
+          { profileId: 5, profileName: 'Geen antwoorden', matchPercentage: null, matchedAnswers: 0, comparedAnswers: 0, missingAnswers: 3 },
         ],
       });
       deepStrictEqual(database.prepare('SELECT * FROM party_answers ORDER BY id').all(), snapshot);
@@ -153,7 +153,7 @@ void it('matches a complete submission without storing user answers', async (con
       const response = await post({ answers });
 
       strictEqual(response.status, StatusCodes.INTERNAL_SERVER_ERROR);
-      deepStrictEqual(await response.json(), { error: 'De overeenkomst met partijen kon niet worden berekend.' });
+      deepStrictEqual(await response.json(), { error: 'De overeenkomst met de onderwijsprofielen kon niet worden berekend.' });
     });
   }
   finally {

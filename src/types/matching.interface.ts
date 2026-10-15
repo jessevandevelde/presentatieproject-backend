@@ -1,6 +1,6 @@
-export interface PartyMatch {
-  readonly partyId: number
-  readonly partyName: string
+export interface ProfileMatch {
+  readonly profileId: number
+  readonly profileName: string
   readonly matchPercentage: number | null
   readonly matchedAnswers: number
   readonly comparedAnswers: number
@@ -9,5 +9,5 @@ export interface PartyMatch {
 
 export interface MatchingResult {
   readonly totalAnswers: number
-  readonly matches: PartyMatch[]
+  readonly matches: ProfileMatch[]
 }

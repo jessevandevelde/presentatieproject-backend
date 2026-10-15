@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { Answer } from '../types/answer.interface';
-import type { MatchingResult, PartyMatch } from '../types/matching.interface';
+import type { MatchingResult, ProfileMatch } from '../types/matching.interface';
 
 const percentageScale = 100;
 const roundingScale = 100;
@@ -8,7 +8,7 @@ const roundingScale = 100;
 export function matchResults(database: DatabaseSync, answers: ReadonlyMap<number, Answer>): MatchingResult {
   const parties = database.prepare('SELECT id, name FROM parties WHERE is_active = 1 ORDER BY id').all();
 
-  const partyAnswers = database.prepare(/* sql */ `
+  const profileAnswers = database.prepare(/* sql */ `
     SELECT current.statement_id AS statementId, current.answer
     FROM party_answers AS current
     JOIN statements ON statements.id = current.statement_id AND statements.is_active = 1
@@ -20,18 +20,18 @@ export function matchResults(database: DatabaseSync, answers: ReadonlyMap<number
     )
   `);
 
-  const matches = parties.map((party): PartyMatch => {
-    const partyId = party['id'];
-    const partyName = party['name'];
+  const matches = parties.map((profile): ProfileMatch => {
+    const profileId = profile['id'];
+    const profileName = profile['name'];
 
-    if (typeof partyId !== 'number' || typeof partyName !== 'string') {
-      throw new Error('Ongeldige partijgegevens in de database.');
+    if (typeof profileId !== 'number' || typeof profileName !== 'string') {
+      throw new Error('Ongeldige profielgegevens in de database.');
     }
 
     let matchedAnswers = 0;
     let comparedAnswers = 0;
 
-    for (const row of partyAnswers.all(partyId)) {
+    for (const row of profileAnswers.all(profileId)) {
       const { statementId } = row;
       const userAnswer = typeof statementId === 'number' ? answers.get(statementId) : undefined;
 
@@ -45,8 +45,8 @@ export function matchResults(database: DatabaseSync, answers: ReadonlyMap<number
     }
 
     return {
-      partyId,
-      partyName,
+      profileId,
+      profileName,
       matchPercentage: comparedAnswers === 0 ? null : Math.round(matchedAnswers / comparedAnswers * percentageScale * roundingScale) / roundingScale,
       matchedAnswers,
       comparedAnswers,
@@ -56,7 +56,7 @@ export function matchResults(database: DatabaseSync, answers: ReadonlyMap<number
 
   matches.sort((left, right) => (right.matchPercentage ?? -1) - (left.matchPercentage ?? -1)
     || right.comparedAnswers - left.comparedAnswers
-    || left.partyId - right.partyId);
+    || left.profileId - right.profileId);
 
   return { totalAnswers: answers.size, matches };
 }

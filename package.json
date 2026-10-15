@@ -1,8 +1,8 @@
 {
-  "name": "stemwijzer-backend",
+  "name": "roc-kompas-backend",
   "version": "1.0.0",
   "private": true,
-  "description": "Stemwijzer Node.js backend",
+  "description": "Node.js backend voor ROC Kompas van ROC Midden Nederland",
   "main": "dist/index.js",
   "scripts": {
     "start": "dotenv -e .env -- nodemon src/index.ts",

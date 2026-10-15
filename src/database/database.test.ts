@@ -2,7 +2,7 @@ import { deepStrictEqual, strictEqual, throws } from 'node:assert';
 import { describe, it } from 'node:test';
 import { openDatabase } from './index';
 
-void describe('Stemwijzer ERD', () => {
+void describe('ROC Kompas ERD', () => {
   void it('creates exactly the four ERD tables and enforces relationships and field constraints', () => {
     const database = openDatabase(':memory:');
 

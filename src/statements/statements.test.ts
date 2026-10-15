@@ -51,11 +51,11 @@ void it('serves statements and party answers over HTTP', async (context) => {
         index: 0,
         id: 10,
         text: 'Eerste stelling over CO₂',
-        partyAnswers: [
-          { partyId: 1, partyName: 'Partij A', answer: 'eens' },
-          { partyId: 2, partyName: 'Partij B', answer: 'neutraal' },
-          { partyId: 3, partyName: 'Partij C', answer: 'oneens' },
-          { partyId: 4, partyName: 'Nog geen antwoord', answer: null },
+        profileAnswers: [
+          { profileId: 1, profileName: 'Partij A', answer: 'eens' },
+          { profileId: 2, profileName: 'Partij B', answer: 'neutraal' },
+          { profileId: 3, profileName: 'Partij C', answer: 'oneens' },
+          { profileId: 4, profileName: 'Nog geen antwoord', answer: null },
         ],
       });
     });
@@ -68,11 +68,11 @@ void it('serves statements and party answers over HTTP', async (context) => {
         index: 1,
         id: 30,
         text: 'Laatste stelling',
-        partyAnswers: [
-          { partyId: 1, partyName: 'Partij A', answer: 'oneens' },
-          { partyId: 2, partyName: 'Partij B', answer: null },
-          { partyId: 3, partyName: 'Partij C', answer: null },
-          { partyId: 4, partyName: 'Nog geen antwoord', answer: null },
+        profileAnswers: [
+          { profileId: 1, profileName: 'Partij A', answer: 'oneens' },
+          { profileId: 2, profileName: 'Partij B', answer: null },
+          { profileId: 3, profileName: 'Partij C', answer: null },
+          { profileId: 4, profileName: 'Nog geen antwoord', answer: null },
         ],
       });
     });
@@ -108,7 +108,7 @@ void it('serves statements and party answers over HTTP', async (context) => {
 
       const response = await fetch(`${baseUrl}/statements?index=0`);
 
-      deepStrictEqual(await response.json(), { index: 0, id: 10, text: 'Eerste stelling over CO₂', partyAnswers: [] });
+      deepStrictEqual(await response.json(), { index: 0, id: 10, text: 'Eerste stelling over CO₂', profileAnswers: [] });
     });
 
     await context.test('returns 404 when no active statements exist', async () => {
@@ -177,7 +177,7 @@ void it('creates, lists, reads, updates and deletes statements over HTTP', async
     await context.test('creates a statement, provisioning a technical superadmin as needed', async () => {
       const response = await post({ text: 'Nieuwe stelling' });
       const row = database.prepare('SELECT * FROM statements WHERE id = 1').get();
-      const admin = database.prepare('SELECT * FROM superadmins WHERE email = \'statements-import@stemwijzer.invalid\'').get();
+      const admin = database.prepare('SELECT * FROM superadmins WHERE email = \'stellingen-import@roc-kompas.invalid\'').get();
 
       if (row === undefined || admin === undefined) {
         throw new Error('Expected a statement and a technical superadmin to exist.');

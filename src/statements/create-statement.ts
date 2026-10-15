@@ -1,7 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { CreateStatementInput, StatementRecord } from '../types/statement.interface';
 
-const technicalAdminEmail = 'statements-import@stemwijzer.invalid';
+const technicalAdminEmail = 'stellingen-import@roc-kompas.invalid';
 
 function ensureTechnicalAdmin(database: DatabaseSync): number {
   database.prepare(`

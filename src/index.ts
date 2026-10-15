@@ -32,5 +32,5 @@ function shutdown(): void {
 process.once('SIGINT', shutdown);
 process.once('SIGTERM', shutdown);
 server.listen(port, () => {
-  process.stdout.write(`Stemwijzer backend: http://localhost:${String(port)}\n`);
+  process.stdout.write(`ROC Kompas backend: http://localhost:${String(port)}\n`);
 });

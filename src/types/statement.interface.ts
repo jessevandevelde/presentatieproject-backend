@@ -4,7 +4,7 @@ export interface StatementResult {
   readonly index: number
   readonly id: SQLOutputValue
   readonly text: SQLOutputValue
-  readonly partyAnswers: Record<string, SQLOutputValue>[]
+  readonly profileAnswers: Record<string, SQLOutputValue>[]
 }
 
 export interface CreateStatementInput {

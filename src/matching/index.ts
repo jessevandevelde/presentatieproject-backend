@@ -29,6 +29,6 @@ export async function handleMatchingRequest(database: DatabaseSync, request: Inc
 
     console.error('Matching mislukt:', error);
     response.writeHead(StatusCodes.INTERNAL_SERVER_ERROR);
-    response.end(JSON.stringify({ error: 'De overeenkomst met partijen kon niet worden berekend.' }));
+    response.end(JSON.stringify({ error: 'De overeenkomst met de onderwijsprofielen kon niet worden berekend.' }));
   }
 }
