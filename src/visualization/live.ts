@@ -1,0 +1,57 @@
+import type { Server } from 'node:http';
+import type { DatabaseSync } from 'node:sqlite';
+import { WebSocket, WebSocketServer } from 'ws';
+import type { VisualizationPointMessage, VisualizationSnapshot } from '../types/visualization.interface';
+import { listPoints } from './points';
+import type { PointBroadcaster } from './index';
+
+const internalErrorCloseCode = 1011;
+
+export function attachVisualizationWebSocket(server: Server, database: DatabaseSync): PointBroadcaster {
+  const webSocketServer = new WebSocketServer({ noServer: true, maxPayload: 1024 });
+
+  server.on('upgrade', (request, socket, head) => {
+    const url = new URL(request.url ?? '/', 'http://localhost');
+
+    if (url.pathname !== '/visualization/live') {
+      socket.destroy();
+
+      return;
+    }
+
+    webSocketServer.handleUpgrade(request, socket, head, (webSocket) => {
+      webSocketServer.emit('connection', webSocket, request);
+    });
+  });
+
+  webSocketServer.on('connection', (webSocket) => {
+    try {
+      const points = listPoints(database);
+      const snapshot: VisualizationSnapshot = { type: 'snapshot', points, total: points.length };
+
+      webSocket.send(JSON.stringify(snapshot));
+    }
+    catch (error: unknown) {
+      console.error('WebSocket-snapshot versturen mislukt:', error);
+      webSocket.close(internalErrorCloseCode, 'Snapshot niet beschikbaar');
+    }
+  });
+
+  return (point) => {
+    const totalRow = database.prepare('SELECT COUNT(*) AS total FROM visualization_points').get();
+    const total = totalRow?.['total'];
+
+    if (typeof total !== 'number') {
+      throw new Error('Het aantal visualisatiepunten kon niet worden bepaald.');
+    }
+
+    const message: VisualizationPointMessage = { type: 'point', point, total };
+    const serializedMessage = JSON.stringify(message);
+
+    for (const client of webSocketServer.clients) {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(serializedMessage);
+      }
+    }
+  };
+}

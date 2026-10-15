@@ -39,6 +39,14 @@ CREATE TABLE IF NOT EXISTS party_answers (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Alleen een willekeurige id en de twee berekende coördinaten worden bewaard.
+-- Er worden bewust geen antwoorden, tijdstippen of herleidbare aanvraaggegevens opgeslagen.
+CREATE TABLE IF NOT EXISTS visualization_points (
+    submission_key TEXT PRIMARY KEY CHECK (length(submission_key) = 36),
+    x REAL NOT NULL CHECK (x BETWEEN -100 AND 100),
+    y REAL NOT NULL CHECK (y BETWEEN -100 AND 100)
+);
+
 CREATE INDEX IF NOT EXISTS idx_statements_created_by ON statements(created_by);
 CREATE INDEX IF NOT EXISTS idx_party_answers_party_id ON party_answers(party_id);
 CREATE INDEX IF NOT EXISTS idx_party_answers_statement_id ON party_answers(statement_id);

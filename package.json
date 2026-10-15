@@ -10,7 +10,7 @@
     "start:prod": "node dist/index.js",
     "db:init": "dotenv -e .env -- ts-node src/database/init.ts",
     "db:seed": "dotenv -e .env -- ts-node src/database/seed.ts",
-    "test": "npm run build && node --test dist/database/database.test.js dist/statements/statements.test.js dist/matching/matching.test.js dist/parties/parties.test.js",
+    "test": "npm run build && node --test dist/database/database.test.js dist/statements/statements.test.js dist/matching/matching.test.js dist/parties/parties.test.js dist/visualization/visualization.test.js",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "eslint": "eslint .",
@@ -24,6 +24,7 @@
     "@eslint/js": "9.39.2",
     "@stylistic/eslint-plugin": "5.7.1",
     "@types/node": "^25.0.10",
+    "@types/ws": "^8.18.2",
     "dotenv-cli": "10.0.0",
     "eslint": "9.39.2",
     "nodemon": "3.1.11",
@@ -32,6 +33,7 @@
     "typescript-eslint": "8.54.0"
   },
   "dependencies": {
-    "http-status-codes": "^2.3.0"
+    "http-status-codes": "^2.3.0",
+    "ws": "^8.22.0"
   }
 }

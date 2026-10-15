@@ -6,6 +6,7 @@ import { openDatabase } from '../database';
 import { createApp } from '../server';
 
 const oversizedLength = 65537;
+const submissionId = '123e4567-e89b-42d3-a456-426614174000';
 
 void it('matches a complete submission without storing user answers', async (context) => {
   const database = openDatabase(':memory:');
@@ -48,7 +49,9 @@ void it('matches a complete submission without storing user answers', async (con
     const url = `http://127.0.0.1:${String(address.port)}/matching`;
 
     async function post(body: unknown): Promise<Response> {
-      return fetch(url, { method: 'POST', headers: [['content-type', 'application/json']], body: JSON.stringify(body) });
+      const requestBody = typeof body === 'object' && body !== null && !Array.isArray(body) ? { ...body, submissionId } : body;
+
+      return fetch(url, { method: 'POST', headers: [['content-type', 'application/json']], body: JSON.stringify(requestBody) });
     }
 
     await context.test('scores, sorts, handles missing data and uses latest party answers', async () => {
@@ -69,6 +72,11 @@ void it('matches a complete submission without storing user answers', async (con
         ],
       });
       deepStrictEqual(database.prepare('SELECT * FROM party_answers ORDER BY id').all(), snapshot);
+      deepStrictEqual(database.prepare('SELECT submission_key, x, y FROM visualization_points').all().map(row => ({
+        submissionKey: row['submission_key'],
+        x: row['x'],
+        y: row['y'],
+      })), [{ submissionKey: submissionId, x: 0, y: 0 }]);
     });
 
     await context.test('rejects malformed, partial, duplicate, unknown and inactive submissions', async () => {
@@ -122,7 +130,7 @@ void it('matches a complete submission without storing user answers', async (con
       strictEqual(wrongMethod.headers.get('allow'), 'POST');
       await wrongMethod.text();
 
-      const response = await fetch(url, { method: 'POST', headers: [['content-type', 'application/json; charset=utf-8']], body: JSON.stringify({ answers }) });
+      const response = await fetch(url, { method: 'POST', headers: [['content-type', 'application/json; charset=utf-8']], body: JSON.stringify({ answers, submissionId }) });
 
       strictEqual(response.status, StatusCodes.OK);
       await response.text();

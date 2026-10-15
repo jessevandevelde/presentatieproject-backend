@@ -7,7 +7,7 @@ Node.js- en TypeScript-backend voor ROC Kompas van ROC Midden Nederland. De API 
 - Theoretisch & behoudend;
 - Praktisch & behoudend.
 
-De antwoorden van deelnemers worden alleen gebruikt om de uitslag te berekenen en worden niet opgeslagen.
+De antwoorden van deelnemers worden alleen gebruikt om de uitslag te berekenen en worden niet opgeslagen. Voor de live visualisatie bewaart de backend uitsluitend een willekeurige inzendcode en de berekende X- en Y-coördinaat, zonder tijdstip of persoonsgegevens.
 
 ## Starten
 
@@ -29,7 +29,9 @@ De tabel- en routenamen rond `parties` zijn tijdelijk intern behouden voor compa
 ## Belangrijkste routes
 
 - `GET /statements?index=0`: haal een actieve stelling en profielantwoorden op.
-- `POST /matching`: vergelijk precies één antwoord per actieve stelling met de profielen.
+- `POST /matching`: vergelijk precies één antwoord per actieve stelling met de profielen. De body bevat ook een willekeurige UUID als `submissionId`, waarmee retries idempotent blijven.
+- `GET /visualization/points`: haal alle anonieme visualisatiepunten op.
+- `WS /visualization/live`: ontvang eerst een volledige snapshot en daarna ieder nieuw punt realtime.
 - `GET /statements/all`: beheerweergave van alle stellingen.
 - `/parties`: bestaande compatibiliteitsroute voor het beheren van de referentieprofielen.
 

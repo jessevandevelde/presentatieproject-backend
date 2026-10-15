@@ -3,13 +3,13 @@ import { describe, it } from 'node:test';
 import { openDatabase } from './index';
 
 void describe('ROC Kompas ERD', () => {
-  void it('creates exactly the four ERD tables and enforces relationships and field constraints', () => {
+  void it('creates the application tables and enforces relationships and field constraints', () => {
     const database = openDatabase(':memory:');
 
     try {
       deepStrictEqual(
         database.prepare('SELECT name FROM sqlite_master WHERE type = \'table\' ORDER BY name').all().map(row => row['name']),
-        ['parties', 'party_answers', 'statements', 'superadmins'],
+        ['parties', 'party_answers', 'statements', 'superadmins', 'visualization_points'],
       );
 
       database.exec(`

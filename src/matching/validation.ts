@@ -6,6 +6,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+const submissionIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+
+export function validateSubmissionId(body: unknown): string {
+  if (!isRecord(body) || typeof body['submissionId'] !== 'string' || !submissionIdPattern.test(body['submissionId'])) {
+    throw new RequestError('submissionId moet een geldige willekeurige UUID zijn.');
+  }
+
+  return body['submissionId'].toLowerCase();
+}
+
 export function validateAnswers(database: DatabaseSync, body: unknown): ReadonlyMap<number, Answer> {
   if (!isRecord(body) || !Array.isArray(body['answers']) || body['answers'].length === 0) {
     throw new RequestError('Stuur een niet-lege answers-lijst met alle antwoorden.');

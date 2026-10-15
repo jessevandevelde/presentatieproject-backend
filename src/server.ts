@@ -19,12 +19,17 @@ import {
   handleDeletePartyRequest,
 } from './parties';
 import { parseId } from './http/parse-id';
+import { attachVisualizationWebSocket } from './visualization/live';
+import { handleListVisualizationPointsRequest } from './visualization';
+import type { PointBroadcaster } from './visualization';
 
 const statementIdPattern = /^\/statements\/([^/]+)$/u;
 const partyIdPattern = /^\/parties\/([^/]+)$/u;
 
 export function createApp(database: DatabaseSync): Server {
-  return createServer((request, response) => {
+  let broadcastPoint: PointBroadcaster = () => undefined;
+
+  const server = createServer((request, response) => {
     response.setHeader('Content-Type', 'application/json; charset=utf-8');
 
     try {
@@ -39,7 +44,20 @@ export function createApp(database: DatabaseSync): Server {
           return;
         }
 
-        void handleMatchingRequest(database, request, response);
+        void handleMatchingRequest(database, request, response, broadcastPoint);
+
+        return;
+      }
+
+      if (url.pathname === '/visualization/points') {
+        if (method !== 'GET') {
+          response.writeHead(StatusCodes.METHOD_NOT_ALLOWED, { allow: 'GET' });
+          response.end(JSON.stringify({ error: 'Gebruik GET voor deze route.' }));
+
+          return;
+        }
+
+        handleListVisualizationPointsRequest(database, response);
 
         return;
       }
@@ -176,4 +194,8 @@ export function createApp(database: DatabaseSync): Server {
       response.end(JSON.stringify({ error: 'De aanvraag kon niet worden verwerkt.' }));
     }
   });
+
+  broadcastPoint = attachVisualizationWebSocket(server, database);
+
+  return server;
 }
