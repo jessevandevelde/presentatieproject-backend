@@ -1,7 +1,11 @@
-import type { DatabaseSync, SQLInputValue } from 'node:sqlite';
+import type { SQLInputValue } from 'node:sqlite';
+import type { AppDatabase } from '../database';
+import { isRemoteDatabase } from '../database';
 import type { UpdateStatementInput } from '../types/statement.interface';
 
-export function updateStatement(database: DatabaseSync, id: number, input: UpdateStatementInput): boolean {
+export async function updateStatement(database: AppDatabase, id: number, input: UpdateStatementInput): Promise<boolean> {
+  if (isRemoteDatabase(database)) return database.updateStatement(id, input);
+
   const assignments: string[] = [];
   const values: SQLInputValue[] = [];
 

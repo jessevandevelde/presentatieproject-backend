@@ -1,10 +1,16 @@
-import type { SQLOutputValue } from 'node:sqlite';
+import type { Answer } from './answer.interface';
+
+export interface ProfileAnswer {
+  readonly answer: Answer | null
+  readonly profileId: number
+  readonly profileName: string
+}
 
 export interface StatementResult {
   readonly index: number
-  readonly id: SQLOutputValue
-  readonly text: SQLOutputValue
-  readonly profileAnswers: Record<string, SQLOutputValue>[]
+  readonly id: number
+  readonly text: string
+  readonly profileAnswers: readonly ProfileAnswer[]
 }
 
 export interface CreateStatementInput {

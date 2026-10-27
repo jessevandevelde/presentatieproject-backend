@@ -1,6 +1,6 @@
 import { StatusCodes } from 'http-status-codes';
 import type { Server } from 'node:http';
-import type { DatabaseSync } from 'node:sqlite';
+import type { AppDatabase } from './database';
 import { createServer } from 'node:http';
 import {
   handleStatementRequest,
@@ -26,8 +26,10 @@ import type { PointBroadcaster } from './visualization';
 const statementIdPattern = /^\/statements\/([^/]+)$/u;
 const partyIdPattern = /^\/parties\/([^/]+)$/u;
 
-export function createApp(database: DatabaseSync): Server {
-  let broadcastPoint: PointBroadcaster = () => undefined;
+export function createApp(database: AppDatabase): Server {
+  let broadcastPoint: PointBroadcaster = async () => {
+    await Promise.resolve();
+  };
 
   const server = createServer((request, response) => {
     response.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -57,14 +59,14 @@ export function createApp(database: DatabaseSync): Server {
           return;
         }
 
-        handleListVisualizationPointsRequest(database, response);
+        void handleListVisualizationPointsRequest(database, response);
 
         return;
       }
 
       if (url.pathname === '/statements') {
         if (method === 'GET') {
-          handleStatementRequest(database, url.searchParams, response);
+          void handleStatementRequest(database, url.searchParams, response);
 
           return;
         }
@@ -89,7 +91,7 @@ export function createApp(database: DatabaseSync): Server {
           return;
         }
 
-        handleListStatementsRequest(database, response);
+        void handleListStatementsRequest(database, response);
 
         return;
       }
@@ -107,7 +109,7 @@ export function createApp(database: DatabaseSync): Server {
         }
 
         if (method === 'GET') {
-          handleGetStatementByIdRequest(database, id, response);
+          void handleGetStatementByIdRequest(database, id, response);
 
           return;
         }
@@ -119,7 +121,7 @@ export function createApp(database: DatabaseSync): Server {
         }
 
         if (method === 'DELETE') {
-          handleDeleteStatementRequest(database, id, response);
+          void handleDeleteStatementRequest(database, id, response);
 
           return;
         }
@@ -132,7 +134,7 @@ export function createApp(database: DatabaseSync): Server {
 
       if (url.pathname === '/parties') {
         if (method === 'GET') {
-          handleListPartiesRequest(database, response);
+          void handleListPartiesRequest(database, response);
 
           return;
         }
@@ -162,7 +164,7 @@ export function createApp(database: DatabaseSync): Server {
         }
 
         if (method === 'GET') {
-          handleGetPartyByIdRequest(database, id, response);
+          void handleGetPartyByIdRequest(database, id, response);
 
           return;
         }
@@ -174,7 +176,7 @@ export function createApp(database: DatabaseSync): Server {
         }
 
         if (method === 'DELETE') {
-          handleDeletePartyRequest(database, id, response);
+          void handleDeletePartyRequest(database, id, response);
 
           return;
         }

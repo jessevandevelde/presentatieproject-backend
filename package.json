@@ -8,8 +8,6 @@
     "start": "dotenv -e .env -- nodemon src/index.ts",
     "dev": "npm start",
     "start:prod": "node dist/index.js",
-    "db:init": "dotenv -e .env -- ts-node src/database/init.ts",
-    "db:seed": "dotenv -e .env -- ts-node src/database/seed.ts",
     "test": "npm run build && node --test dist/database/database.test.js dist/statements/statements.test.js dist/matching/matching.test.js dist/parties/parties.test.js dist/visualization/visualization.test.js",
     "build": "tsc",
     "typecheck": "tsc --noEmit",

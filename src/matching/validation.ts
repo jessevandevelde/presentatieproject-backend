@@ -1,5 +1,6 @@
 import { RequestError } from '../http/request-error';
-import type { DatabaseSync } from 'node:sqlite';
+import type { AppDatabase } from '../database';
+import { isRemoteDatabase } from '../database';
 import type { Answer } from '../types/answer.interface';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -16,7 +17,7 @@ export function validateSubmissionId(body: unknown): string {
   return body['submissionId'].toLowerCase();
 }
 
-export function validateAnswers(database: DatabaseSync, body: unknown): ReadonlyMap<number, Answer> {
+export async function validateAnswers(database: AppDatabase, body: unknown): Promise<ReadonlyMap<number, Answer>> {
   if (!isRecord(body) || !Array.isArray(body['answers']) || body['answers'].length === 0) {
     throw new RequestError('Stuur een niet-lege answers-lijst met alle antwoorden.');
   }
@@ -46,9 +47,11 @@ export function validateAnswers(database: DatabaseSync, body: unknown): Readonly
     answers.set(statementId, answer);
   }
 
-  const statements = database.prepare('SELECT id FROM statements WHERE is_active = 1').all();
+  const statementIds = isRemoteDatabase(database)
+    ? await database.getActiveStatementIds()
+    : database.prepare('SELECT id FROM statements WHERE is_active = 1').all().map(statement => statement['id']);
 
-  if (statements.length !== answers.size || statements.some(statement => typeof statement['id'] !== 'number' || !answers.has(statement['id']))) {
+  if (statementIds.length !== answers.size || statementIds.some(statementId => typeof statementId !== 'number' || !answers.has(statementId))) {
     throw new RequestError('Stuur precies één antwoord voor elke actieve stelling. Haal bij gewijzigde stellingen de actuele lijst opnieuw op.');
   }
 

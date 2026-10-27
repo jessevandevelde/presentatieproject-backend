@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { DatabaseSync } from 'node:sqlite';
+import type { AppDatabase } from '../database';
+import { SupabaseRequestError } from '../database';
 import { readJsonBody } from '../http/read-json-body';
 import { RequestError } from '../http/request-error';
 import { getStatement } from './get-statement';
@@ -12,7 +13,8 @@ import { deleteStatement } from './delete-statement';
 import { validateCreateStatement, validateUpdateStatement } from './validation';
 
 function isForeignKeyViolation(error: unknown): boolean {
-  return error instanceof Error && 'code' in error && error.code === 'ERR_SQLITE_ERROR' && error.message.includes('FOREIGN KEY constraint failed');
+  return (error instanceof SupabaseRequestError && error.code === '23503')
+    || (error instanceof Error && 'code' in error && error.code === 'ERR_SQLITE_ERROR' && error.message.includes('FOREIGN KEY constraint failed'));
 }
 
 function writeStatementNotFound(response: ServerResponse): void {
@@ -20,7 +22,7 @@ function writeStatementNotFound(response: ServerResponse): void {
   response.end(JSON.stringify({ error: 'Geen stelling gevonden met dit id.' }));
 }
 
-export function handleStatementRequest(database: DatabaseSync, query: URLSearchParams, response: ServerResponse): void {
+export async function handleStatementRequest(database: AppDatabase, query: URLSearchParams, response: ServerResponse): Promise<void> {
   const values = query.getAll('index');
   const rawIndex = values[0] ?? '';
   const index = Number(rawIndex);
@@ -33,7 +35,7 @@ export function handleStatementRequest(database: DatabaseSync, query: URLSearchP
   }
 
   try {
-    const statement = getStatement(database, index);
+    const statement = await getStatement(database, index);
 
     if (!statement) {
       response.writeHead(StatusCodes.NOT_FOUND);
@@ -52,11 +54,11 @@ export function handleStatementRequest(database: DatabaseSync, query: URLSearchP
   }
 }
 
-export async function handleCreateStatementRequest(database: DatabaseSync, request: IncomingMessage, response: ServerResponse): Promise<void> {
+export async function handleCreateStatementRequest(database: AppDatabase, request: IncomingMessage, response: ServerResponse): Promise<void> {
   try {
     const body = await readJsonBody(request);
     const input = validateCreateStatement(body);
-    const statement = createStatement(database, input);
+    const statement = await createStatement(database, input);
 
     response.writeHead(StatusCodes.CREATED);
     response.end(JSON.stringify(statement));
@@ -79,9 +81,9 @@ export async function handleCreateStatementRequest(database: DatabaseSync, reque
   }
 }
 
-export function handleListStatementsRequest(database: DatabaseSync, response: ServerResponse): void {
+export async function handleListStatementsRequest(database: AppDatabase, response: ServerResponse): Promise<void> {
   try {
-    const statements = listStatements(database);
+    const statements = await listStatements(database);
 
     response.writeHead(StatusCodes.OK);
     response.end(JSON.stringify(statements));
@@ -93,9 +95,9 @@ export function handleListStatementsRequest(database: DatabaseSync, response: Se
   }
 }
 
-export function handleGetStatementByIdRequest(database: DatabaseSync, id: number, response: ServerResponse): void {
+export async function handleGetStatementByIdRequest(database: AppDatabase, id: number, response: ServerResponse): Promise<void> {
   try {
-    const statement = getStatementById(database, id);
+    const statement = await getStatementById(database, id);
 
     if (!statement) {
       writeStatementNotFound(response);
@@ -113,11 +115,11 @@ export function handleGetStatementByIdRequest(database: DatabaseSync, id: number
   }
 }
 
-export async function handleUpdateStatementRequest(database: DatabaseSync, id: number, request: IncomingMessage, response: ServerResponse): Promise<void> {
+export async function handleUpdateStatementRequest(database: AppDatabase, id: number, request: IncomingMessage, response: ServerResponse): Promise<void> {
   try {
     const body = await readJsonBody(request);
     const input = validateUpdateStatement(body);
-    const updated = updateStatement(database, id, input);
+    const updated = await updateStatement(database, id, input);
 
     if (!updated) {
       writeStatementNotFound(response);
@@ -126,7 +128,7 @@ export async function handleUpdateStatementRequest(database: DatabaseSync, id: n
     }
 
     response.writeHead(StatusCodes.OK);
-    response.end(JSON.stringify(getStatementById(database, id)));
+    response.end(JSON.stringify(await getStatementById(database, id)));
   }
   catch (error: unknown) {
     if (response.destroyed) {
@@ -146,9 +148,9 @@ export async function handleUpdateStatementRequest(database: DatabaseSync, id: n
   }
 }
 
-export function handleDeleteStatementRequest(database: DatabaseSync, id: number, response: ServerResponse): void {
+export async function handleDeleteStatementRequest(database: AppDatabase, id: number, response: ServerResponse): Promise<void> {
   try {
-    const deleted = deleteStatement(database, id);
+    const deleted = await deleteStatement(database, id);
 
     if (!deleted) {
       writeStatementNotFound(response);

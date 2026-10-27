@@ -1,14 +1,14 @@
 import { StatusCodes } from 'http-status-codes';
 import type { ServerResponse } from 'node:http';
-import type { DatabaseSync } from 'node:sqlite';
+import type { AppDatabase } from '../database';
 import type { VisualizationPoint } from '../types/visualization.interface';
 import { listPoints } from './points';
 
-export type PointBroadcaster = (point: VisualizationPoint) => void;
+export type PointBroadcaster = (point: VisualizationPoint) => Promise<void>;
 
-export function handleListVisualizationPointsRequest(database: DatabaseSync, response: ServerResponse): void {
+export async function handleListVisualizationPointsRequest(database: AppDatabase, response: ServerResponse): Promise<void> {
   try {
-    const points = listPoints(database);
+    const points = await listPoints(database);
 
     response.writeHead(StatusCodes.OK);
     response.end(JSON.stringify({ points, total: points.length }));

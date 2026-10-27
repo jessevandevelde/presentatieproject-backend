@@ -2,6 +2,10 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
+export { openSupabaseDatabase, SupabaseRequestError } from './supabase';
+export type { AppDatabase, ProfileReferenceAnswer, RemoteDatabase } from './types';
+export { isRemoteDatabase } from './types';
+
 const projectRoot = resolve(__dirname, '../..');
 
 export function openDatabase(path = process.env['DATABASE_PATH'] ?? resolve(projectRoot, 'data/roc-kompas.sqlite')): DatabaseSync {

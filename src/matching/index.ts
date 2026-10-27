@@ -1,6 +1,6 @@
 import { StatusCodes } from 'http-status-codes';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { DatabaseSync } from 'node:sqlite';
+import type { AppDatabase } from '../database';
 import { matchResults } from './match-results';
 import { validateAnswers, validateSubmissionId } from './validation';
 import { readJsonBody } from '../http/read-json-body';
@@ -8,17 +8,17 @@ import { RequestError } from '../http/request-error';
 import type { PointBroadcaster } from '../visualization';
 import { calculatePoint, savePoint } from '../visualization';
 
-export async function handleMatchingRequest(database: DatabaseSync, request: IncomingMessage, response: ServerResponse, broadcastPoint: PointBroadcaster): Promise<void> {
+export async function handleMatchingRequest(database: AppDatabase, request: IncomingMessage, response: ServerResponse, broadcastPoint: PointBroadcaster): Promise<void> {
   try {
     const body = await readJsonBody(request);
-    const answers = validateAnswers(database, body);
+    const answers = await validateAnswers(database, body);
     const submissionId = validateSubmissionId(body);
-    const results = matchResults(database, answers);
-    const point = calculatePoint(database, submissionId, answers);
-    const savedPoint = savePoint(database, point);
+    const results = await matchResults(database, answers);
+    const point = await calculatePoint(database, submissionId, answers);
+    const savedPoint = await savePoint(database, point);
 
     if (savedPoint !== undefined) {
-      broadcastPoint(savedPoint);
+      await broadcastPoint(savedPoint);
     }
 
     response.writeHead(StatusCodes.OK);

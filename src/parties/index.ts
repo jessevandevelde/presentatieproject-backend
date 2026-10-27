@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { DatabaseSync } from 'node:sqlite';
+import type { AppDatabase } from '../database';
+import { SupabaseRequestError } from '../database';
 import { readJsonBody } from '../http/read-json-body';
 import { RequestError } from '../http/request-error';
 import { createParty } from './create-party';
@@ -11,7 +12,8 @@ import { deleteParty } from './delete-party';
 import { validateParty, validateUpdateParty } from './validation';
 
 function isForeignKeyViolation(error: unknown): boolean {
-  return error instanceof Error && 'code' in error && error.code === 'ERR_SQLITE_ERROR' && error.message.includes('FOREIGN KEY constraint failed');
+  return (error instanceof SupabaseRequestError && error.code === '23503')
+    || (error instanceof Error && 'code' in error && error.code === 'ERR_SQLITE_ERROR' && error.message.includes('FOREIGN KEY constraint failed'));
 }
 
 function writePartyNotFound(response: ServerResponse): void {
@@ -19,11 +21,11 @@ function writePartyNotFound(response: ServerResponse): void {
   response.end(JSON.stringify({ error: 'Geen partij gevonden met dit id.' }));
 }
 
-export async function handleCreatePartyRequest(database: DatabaseSync, request: IncomingMessage, response: ServerResponse): Promise<void> {
+export async function handleCreatePartyRequest(database: AppDatabase, request: IncomingMessage, response: ServerResponse): Promise<void> {
   try {
     const body = await readJsonBody(request);
     const input = validateParty(body);
-    const party = createParty(database, input);
+    const party = await createParty(database, input);
 
     response.writeHead(StatusCodes.CREATED);
     response.end(JSON.stringify(party));
@@ -46,9 +48,9 @@ export async function handleCreatePartyRequest(database: DatabaseSync, request: 
   }
 }
 
-export function handleListPartiesRequest(database: DatabaseSync, response: ServerResponse): void {
+export async function handleListPartiesRequest(database: AppDatabase, response: ServerResponse): Promise<void> {
   try {
-    const parties = listParties(database);
+    const parties = await listParties(database);
 
     response.writeHead(StatusCodes.OK);
     response.end(JSON.stringify(parties));
@@ -60,9 +62,9 @@ export function handleListPartiesRequest(database: DatabaseSync, response: Serve
   }
 }
 
-export function handleGetPartyByIdRequest(database: DatabaseSync, id: number, response: ServerResponse): void {
+export async function handleGetPartyByIdRequest(database: AppDatabase, id: number, response: ServerResponse): Promise<void> {
   try {
-    const party = getPartyById(database, id);
+    const party = await getPartyById(database, id);
 
     if (!party) {
       writePartyNotFound(response);
@@ -80,11 +82,11 @@ export function handleGetPartyByIdRequest(database: DatabaseSync, id: number, re
   }
 }
 
-export async function handleUpdatePartyRequest(database: DatabaseSync, id: number, request: IncomingMessage, response: ServerResponse): Promise<void> {
+export async function handleUpdatePartyRequest(database: AppDatabase, id: number, request: IncomingMessage, response: ServerResponse): Promise<void> {
   try {
     const body = await readJsonBody(request);
     const input = validateUpdateParty(body);
-    const updated = updateParty(database, id, input);
+    const updated = await updateParty(database, id, input);
 
     if (!updated) {
       writePartyNotFound(response);
@@ -93,7 +95,7 @@ export async function handleUpdatePartyRequest(database: DatabaseSync, id: numbe
     }
 
     response.writeHead(StatusCodes.OK);
-    response.end(JSON.stringify(getPartyById(database, id)));
+    response.end(JSON.stringify(await getPartyById(database, id)));
   }
   catch (error: unknown) {
     if (response.destroyed) {
@@ -113,9 +115,9 @@ export async function handleUpdatePartyRequest(database: DatabaseSync, id: numbe
   }
 }
 
-export function handleDeletePartyRequest(database: DatabaseSync, id: number, response: ServerResponse): void {
+export async function handleDeletePartyRequest(database: AppDatabase, id: number, response: ServerResponse): Promise<void> {
   try {
-    const deleted = deleteParty(database, id);
+    const deleted = await deleteParty(database, id);
 
     if (!deleted) {
       writePartyNotFound(response);

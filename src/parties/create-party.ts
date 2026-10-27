@@ -1,7 +1,10 @@
-import type { DatabaseSync } from 'node:sqlite';
+import type { AppDatabase } from '../database';
+import { isRemoteDatabase } from '../database';
 import type { CreatePartyInput, Party } from '../types/party.interface';
 
-export function createParty(database: DatabaseSync, input: CreatePartyInput): Party {
+export async function createParty(database: AppDatabase, input: CreatePartyInput): Promise<Party> {
+  if (isRemoteDatabase(database)) return database.createParty(input);
+
   const row = database.prepare(`
     INSERT INTO parties (name, description, image_url, is_active)
     VALUES (?, ?, ?, ?)

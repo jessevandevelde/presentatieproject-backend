@@ -1,4 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
+import type { AppDatabase } from '../database';
+import { isRemoteDatabase } from '../database';
 import type { CreateStatementInput, StatementRecord } from '../types/statement.interface';
 
 const technicalAdminEmail = 'stellingen-import@roc-kompas.invalid';
@@ -19,10 +21,13 @@ function ensureTechnicalAdmin(database: DatabaseSync): number {
   return row['id'];
 }
 
-export function createStatement(database: DatabaseSync, input: CreateStatementInput): StatementRecord {
-  const createdBy = ensureTechnicalAdmin(database);
+export async function createStatement(database: AppDatabase, input: CreateStatementInput): Promise<StatementRecord> {
+  if (isRemoteDatabase(database)) return database.createStatement(input);
 
-  const row = database.prepare(`
+  const sqliteDatabase: DatabaseSync = database;
+  const createdBy = ensureTechnicalAdmin(sqliteDatabase);
+
+  const row = sqliteDatabase.prepare(`
     INSERT INTO statements (text, created_by, is_active)
     VALUES (?, ?, ?)
     RETURNING id, created_at AS createdAt, updated_at AS updatedAt

@@ -1,4 +1,5 @@
-import type { DatabaseSync } from 'node:sqlite';
+import type { AppDatabase, ProfileReferenceAnswer } from '../database';
+import { isRemoteDatabase } from '../database';
 import type { Answer } from '../types/answer.interface';
 import type { VisualizationPoint } from '../types/visualization.interface';
 
@@ -28,8 +29,10 @@ function roundCoordinate(value: number): number {
   return Math.round(Math.max(-maximumCoordinate, Math.min(maximumCoordinate, value)) * coordinatePrecision) / coordinatePrecision;
 }
 
-export function calculatePoint(database: DatabaseSync, id: string, answers: ReadonlyMap<number, Answer>): VisualizationPoint {
-  const referenceAnswers = database.prepare(/* sql */ `
+export async function calculatePoint(database: AppDatabase, id: string, answers: ReadonlyMap<number, Answer>): Promise<VisualizationPoint> {
+  const referenceAnswers: readonly ProfileReferenceAnswer[] | readonly Record<string, unknown>[] = isRemoteDatabase(database)
+    ? await database.getProfileReferenceAnswers()
+    : database.prepare(/* sql */ `
     SELECT parties.name AS profileName, current.statement_id AS statementId, current.answer
     FROM party_answers AS current
     JOIN parties ON parties.id = current.party_id AND parties.is_active = 1
@@ -45,7 +48,8 @@ export function calculatePoint(database: DatabaseSync, id: string, answers: Read
   const loadings = new Map<number, { x: number, y: number }>();
 
   for (const row of referenceAnswers) {
-    const { profileName, statementId } = row;
+    const { profileName } = row;
+    const { statementId } = row;
     const position = typeof profileName === 'string' ? profilePositions.get(profileName) : undefined;
 
     if (position === undefined || typeof statementId !== 'number') {
@@ -53,7 +57,7 @@ export function calculatePoint(database: DatabaseSync, id: string, answers: Read
     }
 
     const loading = loadings.get(statementId) ?? { x: 0, y: 0 };
-    const referenceValue = answerValue(row['answer']);
+    const referenceValue = answerValue(row.answer);
 
     loading.x += referenceValue * position.x;
     loading.y += referenceValue * position.y;
@@ -82,7 +86,9 @@ export function calculatePoint(database: DatabaseSync, id: string, answers: Read
   };
 }
 
-export function savePoint(database: DatabaseSync, point: VisualizationPoint): VisualizationPoint | undefined {
+export async function savePoint(database: AppDatabase, point: VisualizationPoint): Promise<VisualizationPoint | undefined> {
+  if (isRemoteDatabase(database)) return database.saveVisualizationPoint(point);
+
   const result = database.prepare('INSERT OR IGNORE INTO visualization_points (submission_key, x, y) VALUES (?, ?, ?)').run(point.id, point.x, point.y);
 
   if (result.changes !== 1) {
@@ -92,7 +98,9 @@ export function savePoint(database: DatabaseSync, point: VisualizationPoint): Vi
   return { ...point, id: String(result.lastInsertRowid) };
 }
 
-export function listPoints(database: DatabaseSync): VisualizationPoint[] {
+export async function listPoints(database: AppDatabase): Promise<readonly VisualizationPoint[]> {
+  if (isRemoteDatabase(database)) return database.listVisualizationPoints();
+
   return database.prepare('SELECT rowid AS publicId, x, y FROM visualization_points ORDER BY rowid').all().map((row) => {
     const { publicId, x, y } = row;
 
