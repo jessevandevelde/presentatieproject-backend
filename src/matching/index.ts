@@ -7,14 +7,16 @@ import { readJsonBody } from '../http/read-json-body';
 import { RequestError } from '../http/request-error';
 import type { PointBroadcaster } from '../visualization';
 import { calculatePoint, savePoint } from '../visualization';
+import { loadReferenceProfiles } from './reference-data';
 
 export async function handleMatchingRequest(database: AppDatabase, request: IncomingMessage, response: ServerResponse, broadcastPoint: PointBroadcaster): Promise<void> {
   try {
     const body = await readJsonBody(request);
     const answers = await validateAnswers(database, body);
     const submissionId = validateSubmissionId(body);
-    const results = await matchResults(database, answers);
-    const point = await calculatePoint(database, submissionId, answers);
+    const profiles = await loadReferenceProfiles(database);
+    const results = matchResults(answers, profiles);
+    const point = calculatePoint(submissionId, answers, profiles);
     const savedPoint = await savePoint(database, point);
 
     if (savedPoint !== undefined) {

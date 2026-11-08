@@ -2,6 +2,7 @@ import { RequestError } from '../http/request-error';
 import type { AppDatabase } from '../database';
 import { isRemoteDatabase } from '../database';
 import type { Answer } from '../types/answer.interface';
+import { prepareCached } from '../database/prepared-statement';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -49,7 +50,7 @@ export async function validateAnswers(database: AppDatabase, body: unknown): Pro
 
   const statementIds = isRemoteDatabase(database)
     ? await database.getActiveStatementIds()
-    : database.prepare('SELECT id FROM statements WHERE is_active = 1').all().map(statement => statement['id']);
+    : prepareCached(database, 'SELECT id FROM statements WHERE is_active = 1').all().map(statement => statement['id']);
 
   if (statementIds.length !== answers.size || statementIds.some(statementId => typeof statementId !== 'number' || !answers.has(statementId))) {
     throw new RequestError('Stuur precies één antwoord voor elke actieve stelling. Haal bij gewijzigde stellingen de actuele lijst opnieuw op.');

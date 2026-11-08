@@ -48,8 +48,11 @@ CREATE TABLE IF NOT EXISTS visualization_points (
 );
 
 CREATE INDEX IF NOT EXISTS idx_statements_created_by ON statements(created_by);
+CREATE INDEX IF NOT EXISTS idx_statements_active_id ON statements(is_active, id);
 CREATE INDEX IF NOT EXISTS idx_party_answers_party_id ON party_answers(party_id);
 CREATE INDEX IF NOT EXISTS idx_party_answers_statement_id ON party_answers(statement_id);
+CREATE INDEX IF NOT EXISTS idx_party_answers_latest
+ON party_answers(party_id, statement_id, updated_at DESC, id DESC);
 
 CREATE TRIGGER IF NOT EXISTS superadmins_updated_at
 AFTER UPDATE OF name, email, password_hash ON superadmins

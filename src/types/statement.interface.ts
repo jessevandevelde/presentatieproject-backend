@@ -13,6 +13,10 @@ export interface StatementResult {
   readonly profileAnswers: readonly ProfileAnswer[]
 }
 
+export interface Questionnaire {
+  readonly statements: readonly StatementResult[]
+}
+
 export interface CreateStatementInput {
   readonly text: string
   readonly isActive: boolean

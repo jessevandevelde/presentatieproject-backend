@@ -35,11 +35,15 @@ Individuele antwoorden worden niet bewaard. Voor de live visualisatie wordt alle
 
 ## Belangrijkste routes
 
-- `GET /statements?index=0`: actieve stelling en profielantwoorden.
-- `POST /matching`: vergelijking en anoniem visualisatiepunt.
-- `GET /visualization/points`: bestaande anonieme punten.
-- `WS /visualization/live`: live snapshots en nieuwe punten.
-- `/statements/all`, `/statements/:id` en `/parties`: bestaande beheerroutes.
+- `GET /questionnaire`: haal alle actieve stellingen en profielantwoorden in één cachebare response op.
+- `GET /statements?index=0`: compatibiliteitsroute voor één actieve stelling en profielantwoorden.
+- `POST /matching`: vergelijk precies één antwoord per actieve stelling met de profielen. De body bevat ook een willekeurige UUID als `submissionId`, waarmee retries idempotent blijven.
+- `GET /visualization/points?after=0&limit=1000`: haal anonieme visualisatiepunten cursor-gebaseerd op.
+- `WS /visualization/live`: ontvang eerst maximaal de 5.000 recentste punten en daarna ieder nieuw punt realtime.
+- `GET /statements/all`: beheerweergave van alle stellingen.
+- `/parties`: bestaande compatibiliteitsroute voor het beheren van de referentieprofielen.
+
+Geldige antwoorden zijn `eens`, `neutraal` en `oneens`. De matching is het percentage exact gelijke antwoorden per profiel.
 
 ## Controles
 

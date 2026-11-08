@@ -11,6 +11,8 @@ import { getStatementById } from './get-statement-by-id';
 import { updateStatement } from './update-statement';
 import { deleteStatement } from './delete-statement';
 import { validateCreateStatement, validateUpdateStatement } from './validation';
+import { getQuestionnaire } from './get-questionnaire';
+import { createHash } from 'node:crypto';
 
 function isForeignKeyViolation(error: unknown): boolean {
   return (error instanceof SupabaseRequestError && error.code === '23503')
@@ -20,6 +22,31 @@ function isForeignKeyViolation(error: unknown): boolean {
 function writeStatementNotFound(response: ServerResponse): void {
   response.writeHead(StatusCodes.NOT_FOUND);
   response.end(JSON.stringify({ error: 'Geen stelling gevonden met dit id.' }));
+}
+
+export async function handleQuestionnaireRequest(database: AppDatabase, request: IncomingMessage, response: ServerResponse): Promise<void> {
+  try {
+    const body = JSON.stringify(await getQuestionnaire(database));
+    const etag = `"${createHash('sha256').update(body).digest('base64url')}"`;
+
+    response.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+    response.setHeader('ETag', etag);
+
+    if (request.headers['if-none-match'] === etag) {
+      response.writeHead(StatusCodes.NOT_MODIFIED);
+      response.end();
+
+      return;
+    }
+
+    response.writeHead(StatusCodes.OK);
+    response.end(body);
+  }
+  catch (error: unknown) {
+    console.error('Vragenlijst ophalen mislukt:', error);
+    response.writeHead(StatusCodes.INTERNAL_SERVER_ERROR);
+    response.end(JSON.stringify({ error: 'De vragenlijst kon niet worden opgehaald.' }));
+  }
 }
 
 export async function handleStatementRequest(database: AppDatabase, query: URLSearchParams, response: ServerResponse): Promise<void> {

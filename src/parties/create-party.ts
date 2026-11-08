@@ -1,11 +1,12 @@
 import type { AppDatabase } from '../database';
 import { isRemoteDatabase } from '../database';
 import type { CreatePartyInput, Party } from '../types/party.interface';
+import { prepareCached } from '../database/prepared-statement';
 
 export async function createParty(database: AppDatabase, input: CreatePartyInput): Promise<Party> {
   if (isRemoteDatabase(database)) return database.createParty(input);
 
-  const row = database.prepare(`
+  const row = prepareCached(database, `
     INSERT INTO parties (name, description, image_url, is_active)
     VALUES (?, ?, ?, ?)
     RETURNING id, created_at AS createdAt, updated_at AS updatedAt

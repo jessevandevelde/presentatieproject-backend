@@ -9,6 +9,7 @@ import {
   handleGetStatementByIdRequest,
   handleUpdateStatementRequest,
   handleDeleteStatementRequest,
+  handleQuestionnaireRequest,
 } from './statements';
 import { handleMatchingRequest } from './matching';
 import {
@@ -59,7 +60,20 @@ export function createApp(database: AppDatabase): Server {
           return;
         }
 
-        void handleListVisualizationPointsRequest(database, response);
+        void handleListVisualizationPointsRequest(database, url.searchParams, response);
+
+        return;
+      }
+
+      if (url.pathname === '/questionnaire') {
+        if (method !== 'GET') {
+          response.writeHead(StatusCodes.METHOD_NOT_ALLOWED, { allow: 'GET' });
+          response.end(JSON.stringify({ error: 'Gebruik GET voor deze route.' }));
+
+          return;
+        }
+
+        void handleQuestionnaireRequest(database, request, response);
 
         return;
       }

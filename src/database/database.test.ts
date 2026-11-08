@@ -66,6 +66,10 @@ void describe('ROC Kompas ERD', () => {
       }
 
       deepStrictEqual(database.prepare('PRAGMA foreign_key_check').all(), []);
+      deepStrictEqual(
+        database.prepare('SELECT name FROM sqlite_master WHERE type = \'index\' AND name LIKE \'idx_%\' ORDER BY name').all().map(row => row['name']),
+        ['idx_party_answers_latest', 'idx_party_answers_party_id', 'idx_party_answers_statement_id', 'idx_statements_active_id', 'idx_statements_created_by'],
+      );
     }
     finally {
       database.close();

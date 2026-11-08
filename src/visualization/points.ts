@@ -1,7 +1,9 @@
-import type { AppDatabase, ProfileReferenceAnswer } from '../database';
+import type { AppDatabase } from '../database';
 import { isRemoteDatabase } from '../database';
 import type { Answer } from '../types/answer.interface';
 import type { VisualizationPoint } from '../types/visualization.interface';
+import type { ReferenceProfile } from '../matching/reference-data';
+import { prepareCached } from '../database/prepared-statement';
 
 const maximumCoordinate = 100;
 const coordinatePrecision = 100;
@@ -29,39 +31,24 @@ function roundCoordinate(value: number): number {
   return Math.round(Math.max(-maximumCoordinate, Math.min(maximumCoordinate, value)) * coordinatePrecision) / coordinatePrecision;
 }
 
-export async function calculatePoint(database: AppDatabase, id: string, answers: ReadonlyMap<number, Answer>): Promise<VisualizationPoint> {
-  const referenceAnswers: readonly ProfileReferenceAnswer[] | readonly Record<string, unknown>[] = isRemoteDatabase(database)
-    ? await database.getProfileReferenceAnswers()
-    : database.prepare(/* sql */ `
-    SELECT parties.name AS profileName, current.statement_id AS statementId, current.answer
-    FROM party_answers AS current
-    JOIN parties ON parties.id = current.party_id AND parties.is_active = 1
-    JOIN statements ON statements.id = current.statement_id AND statements.is_active = 1
-    WHERE current.id = (
-      SELECT id FROM party_answers
-      WHERE party_id = current.party_id AND statement_id = current.statement_id
-      ORDER BY updated_at DESC, id DESC
-      LIMIT 1
-    )
-  `).all();
-
+export function calculatePoint(id: string, answers: ReadonlyMap<number, Answer>, profiles: readonly ReferenceProfile[]): VisualizationPoint {
   const loadings = new Map<number, { x: number, y: number }>();
 
-  for (const row of referenceAnswers) {
-    const { profileName } = row;
-    const { statementId } = row;
-    const position = typeof profileName === 'string' ? profilePositions.get(profileName) : undefined;
+  for (const profile of profiles) {
+    const position = profilePositions.get(profile.profileName);
 
-    if (position === undefined || typeof statementId !== 'number') {
+    if (position === undefined) {
       continue;
     }
 
-    const loading = loadings.get(statementId) ?? { x: 0, y: 0 };
-    const referenceValue = answerValue(row.answer);
+    for (const referenceAnswer of profile.answers) {
+      const loading = loadings.get(referenceAnswer.statementId) ?? { x: 0, y: 0 };
+      const referenceValue = answerValue(referenceAnswer.answer);
 
-    loading.x += referenceValue * position.x;
-    loading.y += referenceValue * position.y;
-    loadings.set(statementId, loading);
+      loading.x += referenceValue * position.x;
+      loading.y += referenceValue * position.y;
+      loadings.set(referenceAnswer.statementId, loading);
+    }
   }
 
   let x = 0;
@@ -89,7 +76,7 @@ export async function calculatePoint(database: AppDatabase, id: string, answers:
 export async function savePoint(database: AppDatabase, point: VisualizationPoint): Promise<VisualizationPoint | undefined> {
   if (isRemoteDatabase(database)) return database.saveVisualizationPoint(point);
 
-  const result = database.prepare('INSERT OR IGNORE INTO visualization_points (submission_key, x, y) VALUES (?, ?, ?)').run(point.id, point.x, point.y);
+  const result = prepareCached(database, 'INSERT OR IGNORE INTO visualization_points (submission_key, x, y) VALUES (?, ?, ?)').run(point.id, point.x, point.y);
 
   if (result.changes !== 1) {
     return undefined;
@@ -98,10 +85,8 @@ export async function savePoint(database: AppDatabase, point: VisualizationPoint
   return { ...point, id: String(result.lastInsertRowid) };
 }
 
-export async function listPoints(database: AppDatabase): Promise<readonly VisualizationPoint[]> {
-  if (isRemoteDatabase(database)) return database.listVisualizationPoints();
-
-  return database.prepare('SELECT rowid AS publicId, x, y FROM visualization_points ORDER BY rowid').all().map((row) => {
+function rowsToPoints(rows: readonly Record<string, unknown>[]): VisualizationPoint[] {
+  return rows.map((row) => {
     const { publicId, x, y } = row;
 
     if ((typeof publicId !== 'number' && typeof publicId !== 'bigint') || typeof x !== 'number' || typeof y !== 'number') {
@@ -110,4 +95,46 @@ export async function listPoints(database: AppDatabase): Promise<readonly Visual
 
     return { id: String(publicId), x, y };
   });
+}
+
+export async function listPoints(database: AppDatabase, after = 0, limit = 1000): Promise<readonly VisualizationPoint[]> {
+  if (isRemoteDatabase(database)) return database.listVisualizationPoints(after, limit);
+
+  const rows = prepareCached(database, `
+    SELECT rowid AS publicId, x, y
+    FROM visualization_points
+    WHERE rowid > ?
+    ORDER BY rowid
+    LIMIT ?
+  `).all(after, limit);
+
+  return rowsToPoints(rows);
+}
+
+export async function listRecentPoints(database: AppDatabase, limit = 1000): Promise<readonly VisualizationPoint[]> {
+  if (isRemoteDatabase(database)) return database.listRecentVisualizationPoints(limit);
+
+  const rows = prepareCached(database, `
+    SELECT publicId, x, y FROM (
+      SELECT rowid AS publicId, x, y
+      FROM visualization_points
+      ORDER BY rowid DESC
+      LIMIT ?
+    )
+    ORDER BY publicId
+  `).all(limit);
+
+  return rowsToPoints(rows);
+}
+
+export async function countPoints(database: AppDatabase): Promise<number> {
+  if (isRemoteDatabase(database)) return database.countVisualizationPoints();
+
+  const total = prepareCached(database, 'SELECT COUNT(*) AS total FROM visualization_points').get()?.['total'];
+
+  if (typeof total !== 'number') {
+    throw new Error('Het aantal visualisatiepunten kon niet worden bepaald.');
+  }
+
+  return total;
 }

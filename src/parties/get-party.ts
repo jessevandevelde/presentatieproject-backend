@@ -2,11 +2,12 @@ import type { AppDatabase } from '../database';
 import { isRemoteDatabase } from '../database';
 import type { Party } from '../types/party.interface';
 import { rowToParty } from './row-to-party';
+import { prepareCached } from '../database/prepared-statement';
 
 export async function getPartyById(database: AppDatabase, id: number): Promise<Party | undefined> {
   if (isRemoteDatabase(database)) return database.getPartyById(id);
 
-  const row = database.prepare(`
+  const row = prepareCached(database, `
     SELECT id, name, description, image_url AS imageUrl, is_active AS isActive,
            created_at AS createdAt, updated_at AS updatedAt
     FROM parties

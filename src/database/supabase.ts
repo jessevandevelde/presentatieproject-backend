@@ -1,6 +1,6 @@
 import type { Answer } from '../types/answer.interface';
 import type { CreatePartyInput, Party, UpdatePartyInput } from '../types/party.interface';
-import type { CreateStatementInput, StatementRecord, StatementResult, UpdateStatementInput } from '../types/statement.interface';
+import type { CreateStatementInput, Questionnaire, StatementRecord, StatementResult, UpdateStatementInput } from '../types/statement.interface';
 import type { VisualizationPoint } from '../types/visualization.interface';
 import type { ProfileReferenceAnswer, RemoteDatabase } from './types';
 
@@ -188,6 +188,47 @@ export class SupabaseDatabase implements RemoteDatabase {
     };
   }
 
+  public async getQuestionnaire(): Promise<Questionnaire> {
+    const [statementRows, profiles, answerRows] = await Promise.all([
+      this.requestRows('/statements?select=id,text&is_active=eq.true&order=id.asc'),
+      this.requestRows('/parties?select=id,name&is_active=eq.true&order=id.asc'),
+      this.requestRows('/party_answers?select=id,party_id,statement_id,answer,updated_at&order=updated_at.desc,id.desc'),
+    ]);
+
+    const profileNames = new Map(profiles.map(row => [requireNumber(row['id'], 'profiel-id'), requireString(row['name'], 'profielnaam')]));
+    const activeStatements = new Set(statementRows.map(row => requireNumber(row['id'], 'stelling-id')));
+    const latestAnswers = new Map<string, Answer>();
+
+    for (const row of answerRows) {
+      const profileId = requireNumber(row['party_id'], 'profiel-id');
+      const statementId = requireNumber(row['statement_id'], 'stelling-id');
+      const key = `${String(profileId)}:${String(statementId)}`;
+      const { answer } = row;
+
+      if (!profileNames.has(profileId) || !activeStatements.has(statementId) || latestAnswers.has(key)) continue;
+      if (answer !== 'eens' && answer !== 'neutraal' && answer !== 'oneens') continue;
+
+      latestAnswers.set(key, answer);
+    }
+
+    return {
+      statements: statementRows.map((statement, index) => {
+        const id = requireNumber(statement['id'], 'stelling-id');
+
+        return {
+          index,
+          id,
+          text: requireString(statement['text'], 'stellingtekst'),
+          profileAnswers: [...profileNames].map(([profileId, profileName]) => ({
+            profileId,
+            profileName,
+            answer: latestAnswers.get(`${String(profileId)}:${String(id)}`) ?? null,
+          })),
+        };
+      }),
+    };
+  }
+
   public async updateStatement(id: number, input: UpdateStatementInput): Promise<boolean> {
     const values: JsonRow = {};
 
@@ -262,12 +303,26 @@ export class SupabaseDatabase implements RemoteDatabase {
     }
   }
 
-  public async listVisualizationPoints(): Promise<readonly VisualizationPoint[]> {
-    return (await this.requestRows('/visualization_points?select=id,x,y&order=id.asc')).map(row => ({
+  public async listVisualizationPoints(after: number, limit: number): Promise<readonly VisualizationPoint[]> {
+    return (await this.requestRows(`/visualization_points?select=id,x,y&id=gt.${String(after)}&order=id.asc&limit=${String(limit)}`)).map(row => ({
       id: String(requireNumber(row['id'], 'visualisatie-id')),
       x: requireNumber(row['x'], 'x'),
       y: requireNumber(row['y'], 'y'),
     }));
+  }
+
+  public async listRecentVisualizationPoints(limit: number): Promise<readonly VisualizationPoint[]> {
+    const points = (await this.requestRows(`/visualization_points?select=id,x,y&order=id.desc&limit=${String(limit)}`)).map(row => ({
+      id: String(requireNumber(row['id'], 'visualisatie-id')),
+      x: requireNumber(row['x'], 'x'),
+      y: requireNumber(row['y'], 'y'),
+    }));
+
+    return points.reverse();
+  }
+
+  public async countVisualizationPoints(): Promise<number> {
+    return (await this.requestRows('/visualization_points?select=id')).length;
   }
 
   private async ensureTechnicalAdmin(): Promise<number> {

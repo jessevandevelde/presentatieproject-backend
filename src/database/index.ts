@@ -16,6 +16,11 @@ export function openDatabase(path = process.env['DATABASE_PATH'] ?? resolve(proj
   const database = new DatabaseSync(path, { enableForeignKeyConstraints: true });
 
   try {
+    database.exec(`
+      PRAGMA journal_mode = WAL;
+      PRAGMA synchronous = NORMAL;
+      PRAGMA busy_timeout = 5000;
+    `);
     database.exec(readFileSync(resolve(projectRoot, 'database/schema.sql'), 'utf8'));
   }
   catch (error: unknown) {

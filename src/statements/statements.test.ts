@@ -77,6 +77,50 @@ void it('serves statements and party answers over HTTP', async (context) => {
       });
     });
 
+    await context.test('returns the complete questionnaire in one cacheable request', async () => {
+      const response = await fetch(`${baseUrl}/questionnaire`);
+      const etag = response.headers.get('etag');
+
+      strictEqual(response.status, StatusCodes.OK);
+      strictEqual(response.headers.get('cache-control'), 'public, max-age=60, stale-while-revalidate=300');
+      deepStrictEqual(await response.json(), {
+        statements: [
+          {
+            index: 0, id: 10, text: 'Eerste stelling over CO₂',
+            profileAnswers: [
+              { profileId: 1, profileName: 'Partij A', answer: 'eens' },
+              { profileId: 2, profileName: 'Partij B', answer: 'neutraal' },
+              { profileId: 3, profileName: 'Partij C', answer: 'oneens' },
+              { profileId: 4, profileName: 'Nog geen antwoord', answer: null },
+            ],
+          },
+          {
+            index: 1, id: 30, text: 'Laatste stelling',
+            profileAnswers: [
+              { profileId: 1, profileName: 'Partij A', answer: 'oneens' },
+              { profileId: 2, profileName: 'Partij B', answer: null },
+              { profileId: 3, profileName: 'Partij C', answer: null },
+              { profileId: 4, profileName: 'Nog geen antwoord', answer: null },
+            ],
+          },
+        ],
+      });
+
+      const cacheHeaders = new Headers();
+
+      if (etag !== null) cacheHeaders.set('if-none-match', etag);
+
+      const cachedResponse = await fetch(`${baseUrl}/questionnaire`, { headers: cacheHeaders });
+
+      strictEqual(cachedResponse.status, StatusCodes.NOT_MODIFIED);
+
+      const wrongMethod = await fetch(`${baseUrl}/questionnaire`, { method: 'POST' });
+
+      strictEqual(wrongMethod.status, StatusCodes.METHOD_NOT_ALLOWED);
+      strictEqual(wrongMethod.headers.get('allow'), 'GET');
+      await wrongMethod.text();
+    });
+
     await context.test('rejects missing, duplicate and malformed indexes', async () => {
       for (const query of ['', '?index=', '?index=-1', '?index=1.5', '?index=abc', '?index=1e1', '?index=%20', '?index=0&index=1', '?index=9007199254740992', '?index=0%20OR%201=1']) {
         const response = await fetch(`${baseUrl}/statements${query}`);

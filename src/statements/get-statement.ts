@@ -2,11 +2,12 @@ import type { AppDatabase } from '../database';
 import { isRemoteDatabase } from '../database';
 import type { Answer } from '../types/answer.interface';
 import type { StatementResult } from '../types/statement.interface';
+import { prepareCached } from '../database/prepared-statement';
 
 export async function getStatement(database: AppDatabase, index: number): Promise<StatementResult | undefined> {
   if (isRemoteDatabase(database)) return database.getStatement(index);
 
-  const statement = database.prepare(`
+  const statement = prepareCached(database, `
     SELECT id, text FROM statements
     WHERE is_active = 1
     ORDER BY id
@@ -24,7 +25,7 @@ export async function getStatement(database: AppDatabase, index: number): Promis
     throw new Error('De database heeft ongeldige stellinggegevens teruggegeven.');
   }
 
-  const answers = database.prepare(`
+  const answers = prepareCached(database, `
     SELECT parties.id AS profileId, parties.name AS profileName,
            party_answers.answer
     FROM parties

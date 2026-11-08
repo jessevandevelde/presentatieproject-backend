@@ -104,6 +104,16 @@ void it('stores and broadcasts only an anonymous point after a complete submissi
     strictEqual(duplicateResponse.status, StatusCodes.OK);
     await duplicateResponse.text();
     strictEqual(database.prepare('SELECT COUNT(*) AS total FROM visualization_points').get()?.['total'], 1);
+
+    const pointsResponse = await fetch(`http://127.0.0.1:${String(address.port)}/visualization/points?after=0&limit=1`);
+
+    strictEqual(pointsResponse.status, StatusCodes.OK);
+    deepStrictEqual(await pointsResponse.json(), { points: [{ id: '1', x: 100, y: 100 }], total: 1, nextCursor: '1' });
+
+    const invalidLimitResponse = await fetch(`http://127.0.0.1:${String(address.port)}/visualization/points?limit=0`);
+
+    strictEqual(invalidLimitResponse.status, StatusCodes.BAD_REQUEST);
+    await invalidLimitResponse.text();
     socket.close();
     await once(socket, 'close');
   }
